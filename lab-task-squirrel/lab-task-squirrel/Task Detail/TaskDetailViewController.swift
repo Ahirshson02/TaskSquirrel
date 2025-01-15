@@ -109,6 +109,9 @@ class TaskDetailViewController: UIViewController {
         let region = MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
         mapView.setRegion(region, animated: true)
         // TODO: Add annotation to map view
+        let annotation = MKPointAnnotation()
+        annotation.coordinate = coordinate
+        mapView.addAnnotation(annotation)
     }
 }
 
