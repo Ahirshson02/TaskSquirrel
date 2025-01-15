@@ -7,6 +7,7 @@
 
 import UIKit
 import MapKit
+import PhotosUI
 
 // TODO: Import PhotosUI
 
@@ -59,17 +60,54 @@ class TaskDetailViewController: UIViewController {
 
     @IBAction func didTapAttachPhotoButton(_ sender: Any) {
         // TODO: Check and/or request photo library access authorization.
-
+        if PHPhotoLibrary.authorizationStatus(for: .readWrite) != .authorized{
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
+                switch status{ //switch case structure, operating on status
+                case .authorized:
+                    // case is authorized
+                    DispatchQueue.main.async{
+                        self?.presentImagePicker()
+                    }
+                default:
+                    DispatchQueue.main.async{
+                        self?.presentGoToSettingsAlert()
+                    }
+                }
+            }
+        }
+        //if readWrite is authorized
+        else{
+            presentImagePicker()
+        }
     }
 
     private func presentImagePicker() {
         // TODO: Create, configure and present image picker.
+        var config = PHPickerConfiguration(photoLibrary: PHPhotoLibrary.shared())
+        
+        config.filter = .images
+        config.preferredAssetRepresentationMode = .current //requests current image format
+        
+        config.selectionLimit = 1 //limits user to selecting 1 image
+        
+        //create the image picker with the configuration
+        let picker = PHPickerViewController(configuration: config)
+        
+        //set picker to receive image user selects, self is the current screen?
+        picker.delegate = self
+        present(picker, animated: true)
 
     }
 
     func updateMapView() {
         // TODO: Set map viewing region and scale
-
+        
+        guard let imageLocation = task.imageLocation else { return }
+        
+        let coordinate = imageLocation.coordinate
+        
+        let region = MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+        mapView.setRegion(region, animated: true)
         // TODO: Add annotation to map view
     }
 }
@@ -115,4 +153,36 @@ extension TaskDetailViewController {
 
         present(alertController, animated: true)
     }
+}
+extension TaskDetailViewController: PHPickerViewControllerDelegate{
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        
+        let result = results.first
+        guard let assestId = result?.assetIdentifier,
+              let location = PHAsset.fetchAssets(withLocalIdentifiers: [assestId], options: nil).firstObject?.location
+        else { return }
+        
+        print("📍 Image location coordinate: \(location.coordinate)")
+        
+        guard let provider = result?.itemProvider,
+                  provider.canLoadObject(ofClass: UIImage.self) else {return}
+        
+        provider.loadObject(ofClass: UIImage.self){ [weak self] object, error in
+            if let error = error {
+                DispatchQueue.main.async{ [weak self] in self?.showAlert(for: error) }
+            }
+            guard let image = object as? UIImage else {return}
+            print("we have an image!")
+            DispatchQueue.main.async { [ weak self] in
+                self?.task.set(image, with: location) //Assigns the image and location to the task
+                self?.updateUI() //updates UI
+                self?.updateMapView() // Uodate the map view to include the location
+                
+            }
+            
+        }
+    }
+    
+ 
 }
