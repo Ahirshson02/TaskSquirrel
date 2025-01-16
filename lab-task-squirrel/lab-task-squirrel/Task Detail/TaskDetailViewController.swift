@@ -18,19 +18,22 @@ class TaskDetailViewController: UIViewController {
     @IBOutlet private weak var titleLabel: UILabel!
     @IBOutlet private weak var descriptionLabel: UILabel!
     @IBOutlet private weak var attachPhotoButton: UIButton!
+    @IBOutlet weak var viewPhoto: UIButton!
 
     // MapView outlet
     @IBOutlet private weak var mapView: MKMapView!
 
     var task: Task!
 
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
         // TODO: Register custom annotation view
-
+        mapView.register(TaskAnnotationView.self, forAnnotationViewWithReuseIdentifier: TaskAnnotationView.identifier)
         // TODO: Set mapView delegate
-
+        mapView.delegate = self
         // UI Candy
         mapView.layer.cornerRadius = 12
 
@@ -56,6 +59,7 @@ class TaskDetailViewController: UIViewController {
 
         mapView.isHidden = !task.isComplete
         attachPhotoButton.isHidden = task.isComplete
+        viewPhoto.isHidden = !task.isComplete
     }
 
     @IBAction func didTapAttachPhotoButton(_ sender: Any) {
@@ -188,4 +192,14 @@ extension TaskDetailViewController: PHPickerViewControllerDelegate{
     }
     
  
+}
+extension TaskDetailViewController: MKMapViewDelegate{
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView?{
+        guard let annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: TaskAnnotationView.identifier, for: annotation)
+                as? TaskAnnotationView else{
+            fatalError("Unable to dequeue TaskAnnotationView")
+        }
+        annotationView.configure(with: task.image)
+        return annotationView
+    }
 }
